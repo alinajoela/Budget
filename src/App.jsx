@@ -87,17 +87,17 @@ function fmtD(n) {
 }
 // ─── STYLES ─────────────────────────────────────────────────────
 const C = {
-  bg:      "#0D0D0D",
-  surface: "#161616",
-  card:    "#1C1C1C",
-  border:  "#2A2A2A",
-  text:    "#F0EDE8",
-  muted:   "#888",
-  accent:  "#C8B89A",     // warm sand
-  green:   "#4CAF7D",
-  yellow:  "#E8B84B",
-  red:     "#E05252",
-  dim:     "#333",
+  bg:      "#FAFAF8",
+  surface: "#FFFFFF",
+  card:    "#FFFFFF",
+  border:  "#EAEAE6",
+  text:    "#1C1A16",
+  muted:   "#8A8880",
+  accent:  "#7C5CBF",
+  green:   "#2B7A46",
+  yellow:  "#C08820",
+  red:     "#C83232",
+  dim:     "#D0CCC8",
 }
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
@@ -138,9 +138,9 @@ function Card({ children, style }) {
     </div>
   )
 }
-function SectionTitle({ children }) {
+function SectionTitle({ children, style }) {
   return (
-    <div style={{ fontFamily:"'DM Serif Display', serif", fontSize:11, letterSpacing:"0.15em", textTransform:"uppercase", color:C.accent, marginBottom:12 }}>
+    <div style={{ fontFamily:"'DM Serif Display', serif", fontSize:11, letterSpacing:"0.15em", textTransform:"uppercase", color:C.accent, marginBottom:12, ...style }}>
       {children}
     </div>
   )
@@ -525,6 +525,8 @@ export default function BudgetTracker() {
                       Object.values(prevData.income).reduce((a,b)=>a+(+b||0),0)
                       - prevData.fixed.reduce((a,f)=>a+(+f.amount||0),0)
                       - VAR_CATEGORIES.reduce((a,c)=>a+(+prevData.spending[c.id]||0),0)
+                      - (prevData.savings||SAVINGS_DEFAULTS).reduce((a,s)=>a+(+s.amount||0),0)
+                      - prevData.oneTime.reduce((a,x)=>a+(+x.amount||0),0)
                     ],
                   ].map(([label, curr, prev]) => {
                     const diff = curr - prev
