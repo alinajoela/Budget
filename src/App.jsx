@@ -85,6 +85,162 @@ const storage = {
     localStorage.setItem(key, value)
   }
 }
+// ─── JUNE 2026 SEED ─────────────────────────────────────────────
+// Real June 2026 actuals. Seeded into localStorage once on first load,
+// and only when no data already exists for the month (never overwrites).
+const JUNE_2026_KEY = "budget:2026-06"
+const JUNE_2026 = {
+  income: { ...INCOME_DEFAULTS },
+  // Fuel is a fixed cost in this app (single amount, no entry list), so the
+  // itemized fuel purchases are summed into the fixed "Fuel" line (€213.20).
+  fixed: FIXED_DEFAULTS.map(f => f.id === "fuel" ? { ...f, amount: 213.20 } : { ...f }),
+  savings: SAVINGS_DEFAULTS.map(s => ({ ...s })),
+  varBudgets: Object.fromEntries(VAR_CATEGORIES.map(c => [c.id, c.budget])),
+  entries: {
+    groceries: [
+      { id:1, amount:112.64, label:"Tondi Selver" },
+      { id:2, amount:2.59,   label:"Rimi Sopruse" },
+      { id:3, amount:4.94,   label:"Lidl" },
+      { id:4, amount:25.34,  label:"Rimi Sopruse" },
+      { id:5, amount:1.91,   label:"Tondi Selver" },
+      { id:6, amount:11.53,  label:"Balti-Jaama turg" },
+      { id:7, amount:19.72,  label:"Estonian Food Products" },
+      { id:8, amount:4.20,   label:"Rocca Bio market" },
+      { id:9, amount:67.13,  label:"Rimi Sopruse" },
+      { id:10, amount:23.95, label:"Milvi Zubova market" },
+      { id:11, amount:62.91, label:"Maxima" },
+      { id:12, amount:9.11,  label:"Tondi Selver" },
+      { id:13, amount:73.67, label:"Rimi online" },
+      { id:14, amount:9.44,  label:"Sopruse Rimi pakiautomaat" },
+      { id:15, amount:26.46, label:"IKEA food market" },
+      { id:16, amount:11.50, label:"Balti-Jaama turg" },
+      { id:17, amount:23.53, label:"Milvi Zubova" },
+      { id:18, amount:7.27,  label:"Rimi Telliskivi" },
+      { id:19, amount:5.53,  label:"Balti Jaama Bio" },
+      { id:20, amount:22.93, label:"Rimi Sopruse" },
+      { id:21, amount:55.40, label:"Lidl" },
+      { id:22, amount:16.00, label:"Uku Sööt — toit" },
+      { id:23, amount:8.00,  label:"NYX AardePagarO" },
+      { id:24, amount:66.97, label:"Rimi online" },
+      { id:25, amount:46.78, label:"Rimi online" },
+      { id:26, amount:-7.76, label:"Rimi refund" },
+      { id:27, amount:32.87, label:"Rimi Ülemiste" },
+      { id:28, amount:31.31, label:"Milvi Zubova" },
+      { id:29, amount:10.80, label:"Lidl" },
+      { id:30, amount:34.85, label:"Rimi Sopruse" },
+      { id:31, amount:6.20,  label:"Kristiine Kvaliteetliha" },
+    ],
+    restaurants: [
+      { id:1, amount:20.00, label:"Pōhjala Tap Room" },
+      { id:2, amount:9.00,  label:"La Muu Kohvik" },
+      { id:3, amount:8.90,  label:"Nunne Caffeine" },
+      { id:4, amount:24.00, label:"Marymaris" },
+      { id:5, amount:2.10,  label:"Marymaris" },
+      { id:6, amount:2.79,  label:"No Bananas Kristiine" },
+      { id:7, amount:7.50,  label:"Haaberstikohvik" },
+      { id:8, amount:9.68,  label:"IKEA restaurant" },
+      { id:9, amount:9.00,  label:"Balti Jaama Söbralt" },
+      { id:10, amount:17.00, label:"Fotografiska restaurant" },
+      { id:11, amount:16.70, label:"Gelateria" },
+      { id:12, amount:14.30, label:"Crustum bakery" },
+      { id:13, amount:15.00, label:"Saba" },
+      { id:20, amount:15.72, label:"Wolt (delivery)" },
+      { id:21, amount:16.52, label:"Wolt (delivery)" },
+      { id:22, amount:23.42, label:"Bolt Food (delivery)" },
+      { id:23, amount:23.87, label:"Wolt (delivery)" },
+      { id:24, amount:33.59, label:"Bolt Food (delivery)" },
+      { id:25, amount:30.79, label:"Bolt Food (delivery)" },
+    ],
+    shopping: [
+      { id:1, amount:29.00,  label:"Vakhula Style Chat" },
+      { id:2, amount:31.91,  label:"sin-say.com" },
+      { id:3, amount:12.99,  label:"H&M Kristiine" },
+      { id:4, amount:62.98,  label:"H&M Stockholm" },
+      { id:5, amount:32.95,  label:"Zara" },
+      { id:6, amount:17.99,  label:"Vinted ×2" },
+      { id:7, amount:5.83,   label:"Vinted" },
+      { id:8, amount:35.23,  label:"Mango/Viru" },
+      { id:9, amount:28.90,  label:"Zara/Viru" },
+      { id:10, amount:46.93, label:"H&M Stockholm" },
+      { id:11, amount:100.00, label:"Zara_EE (keeping ~100, rest returned)" },
+      { id:12, amount:0,     label:"Mango.com — returned" },
+    ],
+    beauty: [
+      { id:1, amount:12.00, label:"Viktoriia Isakova" },
+      { id:2, amount:35.00, label:"Glow Beauty Studio" },
+      { id:3, amount:50.00, label:"B.E. Studio" },
+      { id:4, amount:40.00, label:"B.E. Studio" },
+      { id:5, amount:81.00, label:"Jekaterina Skromnova — cream + procedure" },
+    ],
+    ken_cash: [
+      { id:1, amount:100.00, label:"Ken Revolut cash" },
+    ],
+    gifts: [
+      { id:1, amount:60.00,  label:"Matkasport — gift" },
+      { id:2, amount:50.00,  label:"Zara Home — gift" },
+      { id:3, amount:27.57,  label:"XS Kristiine — gift portion" },
+      { id:4, amount:7.00,   label:"Marina Dorosenko" },
+      { id:5, amount:103.18, label:"Temu — Marina bachelorette" },
+      { id:6, amount:42.47,  label:"EVP xsmanguasjad — gift" },
+    ],
+    home_misc: [
+      { id:1, amount:39.99, label:"JYSK" },
+      { id:2, amount:8.68,  label:"Bauhof" },
+      { id:3, amount:99.78, label:"IKEA furniture" },
+      { id:4, amount:60.00, label:"Matkasport (home half)" },
+    ],
+    kids_extra: [
+      { id:1, amount:28.00, label:"Tiger Ülemiste" },
+      { id:2, amount:22.50, label:"Pepco" },
+      { id:3, amount:2.50,  label:"MINISO" },
+      { id:4, amount:17.00, label:"XS Kristiine — Alexa" },
+    ],
+    pharmacy: [
+      { id:1, amount:36.99, label:"Haabersti Tervisekesku — vaccine" },
+      { id:2, amount:6.15,  label:"Sopruse Rimi Südameapt" },
+      { id:3, amount:7.44,  label:"Tallinna Linnaapteek" },
+      { id:4, amount:42.57, label:"Pharmamint" },
+    ],
+    entertainment: [
+      { id:1, amount:12.05, label:"Apollo Kino" },
+      { id:2, amount:26.79, label:"Apollo Kino ×2" },
+      { id:3, amount:2.72,  label:"Apollo Kino" },
+      { id:4, amount:0.90,  label:"Mustamäe Elamusspa" },
+      { id:5, amount:1.69,  label:"Mustamäe Elamusspa" },
+    ],
+    // Itemized fuel purchases kept for the record (summed into fixed "Fuel").
+    fuel: [
+      { id:1, amount:91.00, label:"Fuel — Ken (Kute)" },
+      { id:2, amount:86.78, label:"Olerex — carry to July" },
+      { id:3, amount:13.01, label:"Uber" },
+      { id:4, amount:14.00, label:"Uber split" },
+      { id:5, amount:4.41,  label:"Bolt taxi" },
+      { id:6, amount:4.00,  label:"Europark" },
+    ],
+  },
+  notes: "Heavy month: Alexa birthday, bachelorette boat, Crete flights booked, lots of gifts.\nMango return pending ~176 EUR. Zara return pending ~209 EUR.\nOlerex 86.78 carry-over to July fuel budget.\nWedding decor from Thai/anniversary budget.",
+  oneTime: [
+    { id:1, label:"Pärnu apartment (Kristina)", amount:407.06 },
+    { id:2, label:"Wedding decor — Temu", amount:49.26 },
+    { id:3, label:"Wedding decor — Temu order 2", amount:62.47 },
+    { id:4, label:"Credit card repayment May", amount:804.00 },
+    { id:5, label:"Crete flights LY-KC82KRN", amount:2040.00 },
+    { id:6, label:"Google One subscription", amount:21.99 },
+    { id:7, label:"Claude.ai subscription", amount:22.32 },
+    { id:8, label:"Books — Mnogo Knig", amount:10.58 },
+    { id:9, label:"Car govt fee", amount:5.00 },
+  ],
+  updatedAt: null,
+}
+function seedJune2026() {
+  if (typeof window === "undefined" || !window.localStorage) return
+  try {
+    if (localStorage.getItem(JUNE_2026_KEY)) return
+    const data = { ...emptyMonthData(), ...JUNE_2026, updatedAt: Date.now() }
+    storage.set(JUNE_2026_KEY, JSON.stringify(data))
+  } catch (e) { console.error(e) }
+}
+seedJune2026()
 // ─── UTILS ──────────────────────────────────────────────────────
 function entriesOf(d, catId) { return (d && d.entries && d.entries[catId]) || [] }
 function totalOf(d, catId) { return entriesOf(d, catId).reduce((a,e) => a + (+e.amount||0), 0) }
