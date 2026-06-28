@@ -3,56 +3,76 @@ import { useState, useEffect, useRef, useCallback } from "react"
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 const INCOME_DEFAULTS = {
   salary: 3147,
-  maternity: 4261,
+  maternity: 4225,
   childBenefit: 160,
   rental: 800,
 }
-// FIXED COSTS — 50% bucket (5,184 EUR/month)
+// FIXED COSTS — 50% bucket
 const FIXED_DEFAULTS = [
-  { id:"loans",        label:"Loans (2,022 + 160)",   icon:"🏦", amount:2182   },
-  { id:"hoa",          label:"HOA + utilities (avg)",  icon:"🏠", amount:750    },
-  { id:"insurance",    label:"Insurance (life ×2 + P&C)",icon:"🛡️",amount:218  },
-  { id:"car_lease",    label:"Car lease (Coop)",       icon:"🚗", amount:243.48 },
-  { id:"fuel",         label:"Fuel",                   icon:"⛽", amount:150    },
-  { id:"nanny",        label:"Nanny — Natalja",        icon:"👶", amount:400    },
-  { id:"cleaner",      label:"Cleaner",                icon:"🧹", amount:100    },
-  { id:"activities",   label:"Kids activities + kindergarten", icon:"🩰", amount:164 },
-  { id:"allowances",   label:"Alexa + Leon allowances",icon:"🎒", amount:160    },
-  { id:"pharmacy",     label:"Pharmacy",               icon:"💊", amount:100    },
-  { id:"subs",         label:"Subscriptions",          icon:"📱", amount:17     },
+  { id:"loans",      label:"Loans (2,022 + 160)",             icon:"🏦", amount:2182   },
+  { id:"hoa",        label:"HOA + utilities (avg)",           icon:"🏠", amount:750    },
+  { id:"insurance",  label:"Insurance (life ×2 + P&C)",       icon:"🛡️", amount:218   },
+  { id:"car_lease",  label:"Car lease (Coop)",                icon:"🚗", amount:243.48 },
+  { id:"fuel",       label:"Fuel",                            icon:"⛽", amount:150    },
+  { id:"nanny",      label:"Nanny — Natalja",                 icon:"👶", amount:400    },
+  { id:"cleaner",    label:"Cleaner",                         icon:"🧹", amount:100    },
+  { id:"activities", label:"Kids (kinder 53 + swimming 120)", icon:"🩰", amount:173    },
+  { id:"allowances", label:"Alexa + Leon allowances",         icon:"🎒", amount:160    },
+  { id:"subs",       label:"Subscriptions",                   icon:"📱", amount:90     },
 ]
-// VARIABLE WANTS — 30% bucket (1,320 EUR/month)
+// VARIABLE WANTS — 30% bucket
 const VAR_CATEGORIES = [
-  { id:"groceries",    label:"Groceries",              icon:"🛒", budget:700, bucket:"50" },
-  { id:"restaurants",  label:"Restaurants + delivery", icon:"🍽️", budget:300, bucket:"30" },
-  { id:"shopping",     label:"Shopping — Alina",       icon:"👗", budget:300, bucket:"30" },
-  { id:"beauty",       label:"Beauty — Alina",         icon:"💄", budget:110, bucket:"30" },
-  { id:"ken_cash",     label:"Ken cash",               icon:"💸", budget:100, bucket:"30" },
-  { id:"gifts",        label:"Gifts",                  icon:"🎁", budget:100, bucket:"30" },
-  { id:"home_misc",    label:"Home misc",              icon:"🔨", budget:164, bucket:"30" },
-  { id:"kids_extra",   label:"Kids extra",             icon:"👧", budget:60,  bucket:"30" },
+  { id:"groceries",     label:"Groceries",              icon:"🛒", budget:700, bucket:"50" },
+  { id:"restaurants",   label:"Restaurants + delivery", icon:"🍽️", budget:300, bucket:"30" },
+  { id:"shopping",      label:"Shopping — Alina",       icon:"👗", budget:300, bucket:"30" },
+  { id:"beauty",        label:"Beauty — Alina",         icon:"💄", budget:200, bucket:"30" },
+  { id:"ken_cash",      label:"Ken cash",               icon:"💸", budget:100, bucket:"30" },
+  { id:"gifts",         label:"Gifts",                  icon:"🎁", budget:100, bucket:"30" },
+  { id:"home_misc",     label:"Home misc",              icon:"🔨", budget:150, bucket:"30" },
+  { id:"kids_extra",    label:"Kids extra",             icon:"👧", budget:60,  bucket:"30" },
+  { id:"pharmacy",      label:"Pharmacy",               icon:"💊", budget:100, bucket:"30" },
+  { id:"entertainment", label:"Entertainment",          icon:"🎬", budget:50,  bucket:"30" },
 ]
-// SAVINGS — 20% bucket (2,050 EUR/month)
+// SAVINGS — 20% bucket
 const SAVINGS_DEFAULTS = [
-  { id:"travel",   label:"Travel fund",    icon:"✈️", amount:1000 },
-  { id:"alina",    label:"Alina savings",  icon:"💰", amount:250  },
-  { id:"ken",      label:"Ken savings",    icon:"💰", amount:200  },
-  { id:"pension",  label:"Pension ×2",     icon:"🏛️", amount:600  },
+  { id:"travel",  label:"Travel fund (640 rental + 260 salary)", icon:"✈️", amount:900  },
+  { id:"wedding", label:"Wedding anniversary fund",              icon:"💍", amount:1050 },
+  { id:"alina",   label:"Alina savings",                        icon:"💰", amount:0    },
+  { id:"ken",     label:"Ken savings",                          icon:"💰", amount:0    },
+  { id:"pension", label:"Pension ×2 (redirected to wedding)",   icon:"🏛️", amount:0   },
 ]
 function monthKey(y, m) { return `budget:${y}-${String(m+1).padStart(2,"0")}` }
 function emptyMonthData() {
-  const spending = {}
-  VAR_CATEGORIES.forEach(c => { spending[c.id] = "" })
+  const entries = {}
+  VAR_CATEGORIES.forEach(c => { entries[c.id] = [] })
   return {
     income: { ...INCOME_DEFAULTS },
     fixed: FIXED_DEFAULTS.map(f => ({ ...f })),
     savings: SAVINGS_DEFAULTS.map(s => ({ ...s })),
     varBudgets: Object.fromEntries(VAR_CATEGORIES.map(c => [c.id, c.budget])),
-    spending,
+    entries,
     notes: "",
     oneTime: [],
     updatedAt: null,
   }
+}
+// Migrate stored data: old format used data.spending = { catId: number },
+// new format uses data.entries = { catId: [{ id, amount, label }] }.
+function migrateData(d) {
+  if (!d) return d
+  const entries = {}
+  VAR_CATEGORIES.forEach((c, i) => {
+    if (d.entries && Array.isArray(d.entries[c.id])) {
+      entries[c.id] = d.entries[c.id]
+    } else if (d.spending && +d.spending[c.id] > 0) {
+      entries[c.id] = [{ id: Date.now() + i, amount: +d.spending[c.id], label: "Previous total" }]
+    } else {
+      entries[c.id] = []
+    }
+  })
+  const out = { ...d, entries }
+  delete out.spending
+  return out
 }
 // ─── STORAGE UTILITY ────────────────────────────────────────────
 const storage = {
@@ -66,6 +86,8 @@ const storage = {
   }
 }
 // ─── UTILS ──────────────────────────────────────────────────────
+function entriesOf(d, catId) { return (d && d.entries && d.entries[catId]) || [] }
+function totalOf(d, catId) { return entriesOf(d, catId).reduce((a,e) => a + (+e.amount||0), 0) }
 function pct(actual, budget) {
   if (!budget) return 0
   return Math.min((actual / budget) * 100, 100)
@@ -145,6 +167,95 @@ function SectionTitle({ children, style }) {
     </div>
   )
 }
+// Per-category entry-based spending logger
+function CategorySpending({ cat, data, update }) {
+  const [adding, setAdding] = useState(false)
+  const [amt, setAmt] = useState("")
+  const [lbl, setLbl] = useState("")
+  const entries   = entriesOf(data, cat.id)
+  const spent     = entries.reduce((a,e) => a + (+e.amount||0), 0)
+  const budget    = +data.varBudgets[cat.id] || 0
+  const tl        = trafficLight(spent, budget)
+  const remaining = budget - spent
+  const confirm = () => {
+    if (amt === "" || isNaN(+amt)) return
+    const ne = [...entries, { id: Date.now(), amount: +amt, label: lbl.trim() }]
+    update({ ...data, entries: { ...data.entries, [cat.id]: ne } })
+    setAmt(""); setLbl(""); setAdding(false)
+  }
+  const del = (id) => {
+    const ne = entries.filter(e => e.id !== id)
+    update({ ...data, entries: { ...data.entries, [cat.id]: ne } })
+  }
+  return (
+    <Card>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ fontSize:18 }}>{cat.icon}</span>
+          <div>
+            <div style={{ fontSize:13, fontWeight:500 }}>{cat.label}</div>
+            <div style={{ fontSize:11, color: remaining >= 0 ? C.muted : C.red, marginTop:1 }}>
+              {remaining >= 0 ? `${fmt(remaining)} € left` : `${fmt(Math.abs(remaining))} € over`}
+            </div>
+          </div>
+        </div>
+        <div style={{ textAlign:"right" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, justifyContent:"flex-end", marginBottom:4 }}>
+            <Dot color={tl} />
+            <span style={{ fontFamily:"'DM Mono'", fontSize:13, color:C.accent }}>{fmt(spent)} €</span>
+          </div>
+          <div style={{ fontSize:10, color:C.muted }}>budget {fmt(budget)} €</div>
+        </div>
+      </div>
+      <ProgressBar pct={pct(spent, budget)} color={tl} />
+      {/* Entry list */}
+      {entries.length > 0 && (
+        <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:10 }}>
+          {entries.map(e => (
+            <div key={e.id} style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontFamily:"'DM Mono'", fontSize:13, color:C.text, width:64 }}>{fmtD(+e.amount||0)} €</span>
+              <span style={{ fontSize:12, color:C.muted, flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                {e.label || "—"}
+              </span>
+              <button onClick={() => del(e.id)}
+                style={{ background:"none", border:"none", color:C.red, fontSize:16, padding:"0 4px", lineHeight:1 }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Add purchase */}
+      {!adding ? (
+        <button onClick={() => setAdding(true)}
+          style={{ background:C.accent+"22", border:"none", color:C.accent, borderRadius:6, padding:"6px 12px", fontSize:12, marginTop:10 }}>
+          + Add purchase
+        </button>
+      ) : (
+        <div style={{ display:"flex", gap:8, marginTop:10, alignItems:"center" }}>
+          <input type="number" min="0" placeholder="€" autoFocus value={amt}
+            onChange={e => setAmt(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") confirm() }}
+            style={{ flex:1, textAlign:"right" }} />
+          <input type="text" placeholder="Label (optional)" value={lbl}
+            onChange={e => setLbl(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") confirm() }}
+            style={{ flex:2 }} />
+          <button onClick={confirm}
+            style={{ background:C.green+"33", border:"none", color:C.green, borderRadius:6, padding:"6px 10px", fontSize:14 }}>✓</button>
+          <button onClick={() => { setAmt(""); setLbl(""); setAdding(false) }}
+            style={{ background:"none", border:"none", color:C.muted, fontSize:16, padding:"0 4px" }}>×</button>
+        </div>
+      )}
+      {/* Budget editor */}
+      <div style={{ display:"flex", gap:8, marginTop:10, alignItems:"center" }}>
+        <div style={{ fontSize:10, color:C.muted, flex:1 }}>Monthly budget</div>
+        <input type="number" min="0" placeholder="0"
+          value={data.varBudgets[cat.id]}
+          onChange={e => update({ ...data, varBudgets: { ...data.varBudgets, [cat.id]: e.target.value } })}
+          style={{ width:90, textAlign:"right" }} />
+      </div>
+    </Card>
+  )
+}
 // ─── MAIN APP ───────────────────────────────────────────────────
 export default function BudgetTracker() {
   const now = new Date()
@@ -161,14 +272,14 @@ export default function BudgetTracker() {
     const load = async () => {
       try {
         const r = await storage.get(monthKey(year, month))
-        setData(JSON.parse(r.value))
+        setData(migrateData(JSON.parse(r.value)))
       } catch { setData(emptyMonthData()) }
       // load previous month
       const pm = month === 0 ? 11 : month - 1
       const py = month === 0 ? year - 1 : year
       try {
         const r2 = await storage.get(monthKey(py, pm))
-        setPrevData(JSON.parse(r2.value))
+        setPrevData(migrateData(JSON.parse(r2.value)))
       } catch { setPrevData(null) }
       setLoaded(true)
     }
@@ -190,13 +301,12 @@ export default function BudgetTracker() {
   const totalIncome    = Object.values(data.income).reduce((a,b) => a + (+b||0), 0)
   const totalFixed     = data.fixed.reduce((a,f) => a + (+f.amount||0), 0)
   const totalSavings   = (data.savings || SAVINGS_DEFAULTS).reduce((a,s) => a + (+s.amount||0), 0)
-  const spending       = data.spending
   const varBudgets     = data.varBudgets
   const wants30cats    = VAR_CATEGORIES.filter(c => c.id !== "groceries")
-  const total30spent   = wants30cats.reduce((a,c) => a + (+spending[c.id]||0), 0)
+  const total30spent   = wants30cats.reduce((a,c) => a + totalOf(data, c.id), 0)
   const total30budget  = wants30cats.reduce((a,c) => a + (+varBudgets[c.id]||0), 0)
-  const groceriesSpent = +spending["groceries"] || 0
-  const totalVarSpent  = VAR_CATEGORIES.reduce((a,c) => a + (+spending[c.id]||0), 0)
+  const groceriesSpent = totalOf(data, "groceries")
+  const totalVarSpent  = VAR_CATEGORIES.reduce((a,c) => a + totalOf(data, c.id), 0)
   const totalVarBudget = VAR_CATEGORIES.reduce((a,c) => a + (+varBudgets[c.id]||0), 0)
   const oneTimeTotal   = data.oneTime.reduce((a,x) => a + (+x.amount||0), 0)
   const totalExpenses  = totalFixed + totalVarSpent + totalSavings + oneTimeTotal
@@ -301,7 +411,7 @@ export default function BudgetTracker() {
               <SectionTitle>Categories at a glance</SectionTitle>
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {VAR_CATEGORIES.map(cat => {
-                  const spent = +spending[cat.id] || 0
+                  const spent = totalOf(data, cat.id)
                   const budget = +varBudgets[cat.id] || 0
                   const tl = trafficLight(spent, budget)
                   if (spent === 0 && budget === 0) return null
@@ -364,53 +474,11 @@ export default function BudgetTracker() {
         {tab === "variable" && (
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
             <div style={{ fontSize:11, color:C.muted, marginBottom:4 }}>
-              Update totals weekly. Enter running total for the month so far.
+              Log each purchase as you go. Category totals add up automatically.
             </div>
-            {VAR_CATEGORIES.map(cat => {
-              const spent  = +spending[cat.id] || 0
-              const budget = +varBudgets[cat.id] || 0
-              const tl     = trafficLight(spent, budget)
-              const remaining = budget - spent
-              return (
-                <Card key={cat.id}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <span style={{ fontSize:18 }}>{cat.icon}</span>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:500 }}>{cat.label}</div>
-                        <div style={{ fontSize:11, color: remaining >= 0 ? C.muted : C.red, marginTop:1 }}>
-                          {remaining >= 0 ? `${fmt(remaining)} € left` : `${fmt(Math.abs(remaining))} € over`}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ textAlign:"right" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:6, justifyContent:"flex-end", marginBottom:4 }}>
-                        <Dot color={tl} />
-                        <span style={{ fontFamily:"'DM Mono'", fontSize:13, color:C.accent }}>{fmt(spent)} €</span>
-                      </div>
-                      <div style={{ fontSize:10, color:C.muted }}>budget {fmt(budget)} €</div>
-                    </div>
-                  </div>
-                  <ProgressBar pct={pct(spent, budget)} color={tl} />
-                  <div style={{ display:"flex", gap:8, marginTop:10, alignItems:"center" }}>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:10, color:C.muted, marginBottom:3 }}>Spent this month</div>
-                      <input type="number" min="0" placeholder="0"
-                        value={spending[cat.id]}
-                        onChange={e => update({ ...data, spending: { ...spending, [cat.id]: e.target.value } })}
-                      />
-                    </div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:10, color:C.muted, marginBottom:3 }}>Monthly budget</div>
-                      <input type="number" min="0" placeholder="0"
-                        value={varBudgets[cat.id]}
-                        onChange={e => update({ ...data, varBudgets: { ...varBudgets, [cat.id]: e.target.value } })}
-                      />
-                    </div>
-                  </div>
-                </Card>
-              )
-            })}
+            {VAR_CATEGORIES.map(cat => (
+              <CategorySpending key={cat.id} cat={cat} data={data} update={update} />
+            ))}
           </div>
         )}
         {/* ══ FIXED COSTS TAB ══ */}
@@ -520,11 +588,11 @@ export default function BudgetTracker() {
                   {[
                     ["Income", totalIncome, Object.values(prevData.income).reduce((a,b)=>a+(+b||0),0)],
                     ["Fixed", totalFixed, prevData.fixed.reduce((a,f)=>a+(+f.amount||0),0)],
-                    ["Variable", totalVarSpent, VAR_CATEGORIES.reduce((a,c)=>a+(+prevData.spending[c.id]||0),0)],
+                    ["Variable", totalVarSpent, VAR_CATEGORIES.reduce((a,c)=>a+totalOf(prevData, c.id),0)],
                     ["Free to spend", freeToSpend,
                       Object.values(prevData.income).reduce((a,b)=>a+(+b||0),0)
                       - prevData.fixed.reduce((a,f)=>a+(+f.amount||0),0)
-                      - VAR_CATEGORIES.reduce((a,c)=>a+(+prevData.spending[c.id]||0),0)
+                      - VAR_CATEGORIES.reduce((a,c)=>a+totalOf(prevData, c.id),0)
                       - (prevData.savings||SAVINGS_DEFAULTS).reduce((a,s)=>a+(+s.amount||0),0)
                       - prevData.oneTime.reduce((a,x)=>a+(+x.amount||0),0)
                     ],
@@ -551,8 +619,8 @@ export default function BudgetTracker() {
                 <Card>
                   <SectionTitle>Variable spending by category</SectionTitle>
                   {VAR_CATEGORIES.map(cat => {
-                    const curr = +spending[cat.id] || 0
-                    const prev = +prevData.spending[cat.id] || 0
+                    const curr = totalOf(data, cat.id)
+                    const prev = totalOf(prevData, cat.id)
                     if (curr === 0 && prev === 0) return null
                     const diff = curr - prev
                     const pm = month === 0 ? 11 : month - 1
