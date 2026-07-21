@@ -32,11 +32,28 @@
 
 ---
 
+## 3. Presentation Checklist
+*In addition to the strategic document checklist for the argument*
+
+1. Does each slide have one point — or is it doing three things at once?
+2. Does the slide title state the conclusion — or just the topic?
+3. Could you follow the argument from the slide titles alone?
+4. Is there a slide that exists only to show the presenter did a lot of work?
+5. Does the last slide state a decision or action — or does it just say "Thank you / Questions"?
+6. If the presenter isn't in the room, does the deck still make sense?
+
+**The quick version when you're short on time:**
+"Read only the slide titles. Do they tell a coherent story? And what does the last slide ask the audience to do?"
+
+---
+
 ## When to use which
 
 | Work type | Use |
 |---|---|
 | Brief or proposal from your team | Strategic Document Checklist |
 | Agency proposal or vendor pitch | Strategic Document Checklist |
+| Presentation from team or agency | Presentation Checklist + Strategic Document Checklist |
 | Anything produced with AI assistance | AI-Generated Content Checklist |
-| AI-assisted strategic document | Both |
+| AI-assisted strategic document | Strategic + AI Checklists |
+| AI-assisted presentation | All three |
