@@ -496,27 +496,46 @@ function Investments() {
     }, 600)
   }, [])
   const update = (next) => { setInv(next); save(next) }
-  const setBalance = (id, val) => {
-    const platforms = inv.platforms.map(p => p.id === id ? { ...p, balance: val } : p)
+  const setPlatformField = (id, field, val) => {
+    const platforms = inv.platforms.map(p => p.id === id ? { ...p, [field]: val } : p)
     update({ ...inv, platforms })
+  }
+  const addPlatform = () => {
+    const p = { id:"p"+Date.now(), label:"New account", balance:0, group:"growth", note:"" }
+    update({ ...inv, platforms:[...inv.platforms, p] })
+  }
+  const delPlatform = (id) => {
+    const platforms = inv.platforms.filter(p => p.id !== id)
+    const goals = inv.goals.map(g => ({ ...g, linked: g.linked.filter(l => l !== id) }))
+    update({ ...inv, platforms, goals })
   }
   const setGoalField = (id, field, val) => {
     const goals = inv.goals.map(g => g.id === id ? { ...g, [field]: val } : g)
     update({ ...inv, goals })
   }
+  const toggleLink = (goalId, platId) => {
+    const goals = inv.goals.map(g => {
+      if (g.id !== goalId) return g
+      const linked = g.linked.includes(platId) ? g.linked.filter(l => l !== platId) : [...g.linked, platId]
+      return { ...g, linked }
+    })
+    update({ ...inv, goals })
+  }
+  const addGoal = () => {
+    const g = { id:"g"+Date.now(), label:"New goal", icon:"🎯", target:0, monthly:0, returnPct:0, targetDate:"", linked:[] }
+    update({ ...inv, goals:[...inv.goals, g] })
+  }
+  const delGoal = (id) => update({ ...inv, goals: inv.goals.filter(g => g.id !== id) })
   if (!loaded) return (
     <div style={{ color:C.muted, fontSize:13, textAlign:"center", padding:"30px 0" }}>Loading…</div>
   )
+  const selectStyle = { background:C.bg, border:`1px solid ${C.border}`, color:C.text, fontFamily:"'DM Mono', monospace", fontSize:13, padding:"6px 8px", borderRadius:6, outline:"none" }
   const balOf = (id) => { const p = inv.platforms.find(x => x.id === id); return p ? (+p.balance||0) : 0 }
   const groupTotal = (g) => inv.platforms.filter(p => p.group === g).reduce((a,p) => a + (+p.balance||0), 0)
   const pensionTotal = groupTotal("pension")
   const personalNet = groupTotal("safety") + groupTotal("growth") + (inv.includePension ? pensionTotal : 0)
   const kenTotal = groupTotal("ken")
-  const goalCurrent = (g) => {
-    let c = g.linked.reduce((a, id) => a + balOf(id), 0)
-    if (g.id === "million" && inv.includePension) c += pensionTotal
-    return c
-  }
+  const goalCurrent = (g) => g.linked.reduce((a, id) => a + balOf(id), 0)
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
       {/* Net worth hero */}
@@ -568,21 +587,21 @@ function Investments() {
         const tl = p >= 100 ? "green" : onTrack === false ? "over" : onTrack === true ? "green" : "yellow"
         return (
           <Card key={g.id}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ fontSize:20 }}>{g.icon}</span>
-                <div>
-                  <div style={{ fontSize:14, fontWeight:500 }}>{g.label}</div>
-                  <div style={{ fontSize:11, color:C.muted, marginTop:1 }}>
-                    {fmt(current)} € of {fmt(target)} €
-                  </div>
-                </div>
-              </div>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+              <input type="text" value={g.icon} onChange={e => setGoalField(g.id, "icon", e.target.value)}
+                style={{ width:38, textAlign:"center", fontSize:18, padding:"4px 2px" }} />
+              <input type="text" value={g.label} onChange={e => setGoalField(g.id, "label", e.target.value)}
+                style={{ flex:1, fontSize:14, fontFamily:"'DM Sans', sans-serif" }} />
+              <button onClick={() => delGoal(g.id)} title="Delete goal"
+                style={{ background:"none", border:"none", color:C.red, fontSize:18, padding:"0 4px", lineHeight:1 }}>×</button>
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
+              <span style={{ fontSize:11, color:C.muted }}>{fmt(current)} € of {fmt(target)} €</span>
               <div style={{ textAlign:"right" }}>
-                <div style={{ fontFamily:"'DM Mono'", fontSize:16, color:C.accent }}>{p.toFixed(0)}%</div>
+                <span style={{ fontFamily:"'DM Mono'", fontSize:16, color:C.accent }}>{p.toFixed(0)}%</span>
                 {remaining > 0
-                  ? <div style={{ fontSize:10, color:C.muted }}>{fmt(remaining)} € to go</div>
-                  : <div style={{ fontSize:10, color:C.green }}>reached ✓</div>}
+                  ? <span style={{ fontSize:10, color:C.muted, marginLeft:8 }}>{fmt(remaining)} € to go</span>
+                  : <span style={{ fontSize:10, color:C.green, marginLeft:8 }}>reached ✓</span>}
               </div>
             </div>
             <ProgressBar pct={p} color={tl} />
@@ -631,6 +650,24 @@ function Investments() {
                   onChange={e => setGoalField(g.id, "targetDate", e.target.value)} style={{ textAlign:"right" }} />
               </label>
             </div>
+            {/* Linked accounts — which balances count toward this goal */}
+            <div style={{ marginTop:12 }}>
+              <div style={{ fontSize:10, color:C.muted, marginBottom:6 }}>Counts these accounts</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {inv.platforms.map(pl => {
+                  const on = g.linked.includes(pl.id)
+                  return (
+                    <button key={pl.id} onClick={() => toggleLink(g.id, pl.id)}
+                      style={{
+                        fontSize:11, padding:"4px 9px", borderRadius:12, border:`1px solid ${on ? C.accent : C.border}`,
+                        background: on ? C.accent+"22" : "transparent", color: on ? C.accent : C.muted,
+                      }}>
+                      {on ? "✓ " : ""}{pl.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
             {/* 5-year forecast */}
             <div style={{ marginTop:10, paddingTop:10, borderTop:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between" }}>
               <span style={{ fontSize:11, color:C.muted }}>Projected in 5 years</span>
@@ -641,10 +678,14 @@ function Investments() {
           </Card>
         )
       })}
+      <button onClick={addGoal}
+        style={{ background:C.accent+"22", border:"none", color:C.accent, borderRadius:8, padding:"8px 12px", fontSize:12, alignSelf:"flex-start" }}>
+        + Add goal
+      </button>
       {/* Platform balances */}
-      <SectionTitle style={{ marginBottom:0, marginTop:8 }}>Platform balances</SectionTitle>
+      <SectionTitle style={{ marginBottom:0, marginTop:8 }}>Accounts & balances</SectionTitle>
       <div style={{ fontSize:11, color:C.muted, marginTop:-4 }}>
-        Update these monthly — everything above recalculates automatically.
+        Everything here is editable — name, note, group, balance. Totals above recalculate automatically.
       </div>
       {Object.keys(PLATFORM_GROUPS).map(group => {
         const rows = inv.platforms.filter(p => p.group === group)
@@ -656,20 +697,32 @@ function Investments() {
               <span style={{ fontFamily:"'DM Mono'", fontSize:12, color: group === "ken" ? C.muted : C.accent }}>{fmt(groupTotal(group))} €</span>
             </div>
             {rows.map(p => (
-              <Card key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", marginBottom:8 }}>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:13 }}>{p.label}</div>
-                  <div style={{ fontSize:10, color:C.muted, marginTop:1 }}>{p.note}</div>
+              <Card key={p.id} style={{ padding:"10px 14px", marginBottom:8 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <input type="text" value={p.label} onChange={e => setPlatformField(p.id, "label", e.target.value)}
+                    style={{ flex:1, fontSize:13, fontFamily:"'DM Sans', sans-serif" }} />
+                  <input type="number" value={p.balance} onChange={e => setPlatformField(p.id, "balance", e.target.value)}
+                    style={{ width:96, textAlign:"right", fontFamily:"'DM Mono'", fontSize:13 }} />
+                  <span style={{ color:C.muted, fontSize:12 }}>€</span>
+                  <button onClick={() => delPlatform(p.id)} title="Delete account"
+                    style={{ background:"none", border:"none", color:C.red, fontSize:18, padding:"0 2px", lineHeight:1 }}>×</button>
                 </div>
-                <input type="number" value={p.balance}
-                  onChange={e => setBalance(p.id, e.target.value)}
-                  style={{ width:100, textAlign:"right", fontFamily:"'DM Mono'", fontSize:13 }} />
-                <span style={{ color:C.muted, fontSize:12 }}>€</span>
+                <div style={{ display:"flex", gap:8, marginTop:8, alignItems:"center" }}>
+                  <select value={p.group} onChange={e => setPlatformField(p.id, "group", e.target.value)} style={selectStyle}>
+                    {Object.keys(PLATFORM_GROUPS).map(gk => <option key={gk} value={gk}>{PLATFORM_GROUPS[gk]}</option>)}
+                  </select>
+                  <input type="text" placeholder="Note" value={p.note} onChange={e => setPlatformField(p.id, "note", e.target.value)}
+                    style={{ flex:1, fontSize:12 }} />
+                </div>
               </Card>
             ))}
           </div>
         )
       })}
+      <button onClick={addPlatform}
+        style={{ background:C.accent+"22", border:"none", color:C.accent, borderRadius:8, padding:"8px 12px", fontSize:12, alignSelf:"flex-start" }}>
+        + Add account
+      </button>
       {kenTotal > 0 && (
         <div style={{ fontSize:11, color:C.muted, fontStyle:"italic", padding:"0 2px 4px" }}>
           Ken's separate accounts are shown for reference and excluded from your net worth and goals.
